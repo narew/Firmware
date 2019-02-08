@@ -1,6 +1,6 @@
 /***************************************************************************
  *
- *   Copyright (c) 2013-2014 PX4 Development Team. All rights reserved.
+ *   Copyright (c) 2013-2017 PX4 Development Team. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,37 +31,43 @@
  *
  ****************************************************************************/
 /**
- * @file navigator_rtl.h
+ * @file rtl.h
+ *
  * Helper class for RTL
  *
  * @author Julian Oes <julian@oes.ch>
  * @author Anton Babushkin <anton.babushkin@me.com>
  */
 
-#ifndef NAVIGATOR_RTL_H
-#define NAVIGATOR_RTL_H
+#pragma once
 
-#include <controllib/blocks.hpp>
-#include <controllib/block/BlockParam.hpp>
-
-#include <navigator/navigation.h>
-#include <uORB/topics/home_position.h>
-#include <uORB/topics/vehicle_global_position.h>
+#include <px4_module_params.h>
 
 #include "navigator_mode.h"
 #include "mission_block.h"
 
 class Navigator;
 
-class RTL : public MissionBlock
+class RTL : public MissionBlock, public ModuleParams
 {
 public:
-	RTL(Navigator *navigator, const char *name);
+	enum RTLType {
+		RTL_HOME = 0,
+		RTL_LAND,
+		RTL_MISSION,
+	};
+
+	RTL(Navigator *navigator);
+
 	~RTL() = default;
 
 	void on_inactive() override;
 	void on_activation() override;
 	void on_active() override;
+
+	void set_return_alt_min(bool min);
+
+	int rtl_type() const;
 
 private:
 	/**
@@ -74,12 +80,6 @@ private:
 	 */
 	void		advance_rtl();
 
-	/**
-	 * Get RTL altitude
-	 */
-	float 		get_rtl_altitude();
-
-
 	enum RTLState {
 		RTL_STATE_NONE = 0,
 		RTL_STATE_CLIMB,
@@ -91,11 +91,13 @@ private:
 		RTL_STATE_LANDED,
 	} _rtl_state{RTL_STATE_NONE};
 
-	control::BlockParamFloat _param_return_alt;
-	control::BlockParamFloat _param_min_loiter_alt;
-	control::BlockParamFloat _param_descend_alt;
-	control::BlockParamFloat _param_land_delay;
-	control::BlockParamFloat _param_rtl_min_dist;
-};
+	bool _rtl_alt_min{false};
 
-#endif
+	DEFINE_PARAMETERS(
+		(ParamFloat<px4::params::RTL_RETURN_ALT>) _param_return_alt,
+		(ParamFloat<px4::params::RTL_DESCEND_ALT>) _param_descend_alt,
+		(ParamFloat<px4::params::RTL_LAND_DELAY>) _param_land_delay,
+		(ParamFloat<px4::params::RTL_MIN_DIST>) _param_rtl_min_dist,
+		(ParamInt<px4::params::RTL_TYPE>) _param_rtl_type
+	)
+};
